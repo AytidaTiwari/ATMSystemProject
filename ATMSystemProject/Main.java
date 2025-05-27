@@ -1,5 +1,3 @@
-package com.example.atmsystem;
-
 import java.io.*;
 import java.util.*;
 
@@ -20,6 +18,7 @@ class Account {
     public double getBalance() { return balance; }
 
     public void deposit(double amount) { balance += amount; }
+
     public boolean withdraw(double amount) {
         if (balance >= amount) {
             balance -= amount;
@@ -52,7 +51,11 @@ class AccountDAO {
         BufferedReader reader = new BufferedReader(new FileReader(FILE_NAME));
         String line;
         while ((line = reader.readLine()) != null) {
-            accounts.add(Account.fromFileString(line));
+            try {
+                accounts.add(Account.fromFileString(line));
+            } catch (Exception e) {
+                System.out.println("Skipping invalid line in file: " + line);
+            }
         }
         reader.close();
         return accounts;
@@ -76,6 +79,13 @@ class ATMService {
     public ATMService() throws IOException {
         dao = new AccountDAO();
         accounts = dao.getAllAccounts();
+
+        // Add default demo account if no accounts exist
+        if (accounts.isEmpty()) {
+            Account defaultAccount = new Account("0000", "Demo User", 1000.00);
+            accounts.add(defaultAccount);
+            dao.saveAccounts(accounts);
+        }
     }
 
     public void createAccount(String number, String name, double initialBalance) throws IOException {
@@ -98,23 +108,32 @@ class ATMService {
     }
 
     public void deposit(String number, double amount) throws IOException {
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
+
         Account acc = findAccount(number);
         if (acc == null) throw new IllegalArgumentException("Account not found");
+        if (acc.getAccountNumber().equals("0000")) throw new IllegalArgumentException("Cannot modify Demo Account");
+
         acc.deposit(amount);
         dao.saveAccounts(accounts);
     }
 
     public boolean withdraw(String number, double amount) throws IOException {
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
+
         Account acc = findAccount(number);
         if (acc == null) throw new IllegalArgumentException("Account not found");
+        if (acc.getAccountNumber().equals("0000")) throw new IllegalArgumentException("Cannot modify Demo Account");
+
         boolean success = acc.withdraw(amount);
         dao.saveAccounts(accounts);
         return success;
     }
 
     public void displayAccounts() {
+        System.out.printf("\n%-15s %-20s %-10s\n", "Account No", "Holder Name", "Balance");
         for (Account acc : accounts) {
-            System.out.printf("%s | %s | %.2f\n", acc.getAccountNumber(), acc.getHolderName(), acc.getBalance());
+            System.out.printf("%-15s %-20s %.2f\n", acc.getAccountNumber(), acc.getHolderName(), acc.getBalance());
         }
     }
 }
@@ -135,7 +154,7 @@ public class Main {
                 System.out.println("5. Exit");
                 System.out.print("Enter choice: ");
                 int choice = scanner.nextInt();
-                scanner.nextLine();
+                scanner.nextLine(); // consume newline
 
                 switch (choice) {
                     case 1:
@@ -145,6 +164,7 @@ public class Main {
                         String name = scanner.nextLine();
                         System.out.print("Enter initial balance: ");
                         double balance = scanner.nextDouble();
+                        scanner.nextLine(); // consume newline
                         service.createAccount(number, name, balance);
                         break;
                     case 2:
@@ -152,6 +172,7 @@ public class Main {
                         number = scanner.nextLine();
                         System.out.print("Enter deposit amount: ");
                         double dep = scanner.nextDouble();
+                        scanner.nextLine(); // consume newline
                         service.deposit(number, dep);
                         break;
                     case 3:
@@ -159,6 +180,7 @@ public class Main {
                         number = scanner.nextLine();
                         System.out.print("Enter withdrawal amount: ");
                         double with = scanner.nextDouble();
+                        scanner.nextLine(); // consume newline
                         if (!service.withdraw(number, with)) {
                             System.out.println("Insufficient balance.");
                         }
