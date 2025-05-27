@@ -123,8 +123,8 @@ class ATMService {
 public class Main {
     public static void main(String[] args) {
         try {
-            Scanner Scanner = new Scanner(System.in);
-            ATMService service = new ATMService();4
+            Scanner scanner = new Scanner(System.in);
+            ATMService service = new ATMService();
 
             while (true) {
                 System.out.println("\n--- ATM System ---");
